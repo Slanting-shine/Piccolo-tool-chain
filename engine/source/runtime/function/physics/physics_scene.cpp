@@ -164,6 +164,8 @@ namespace Piccolo
     }
 
     void PhysicsScene::removeRigidBody(uint32_t body_id) { m_pending_remove_bodies.push_back(body_id); }
+    void PhysicsScene::deactivateRigidBody(uint32_t body_id) { m_pending_deactivate_bodies.push_back(body_id); }
+    void PhysicsScene::activateRigidBody(uint32_t body_id) { m_pending_activate_bodies.push_back(body_id); }
 
     void PhysicsScene::updateRigidBodyGlobalTransform(uint32_t body_id, const Transform& global_transform)
     {
@@ -192,7 +194,22 @@ namespace Piccolo
             body_interface.RemoveBody(JPH::BodyID(body_id));
             body_interface.DestroyBody(JPH::BodyID(body_id));
         }
+
+        for (uint32_t body_id : m_pending_deactivate_bodies)
+        {
+            body_interface.DeactivateBody(JPH::BodyID(body_id));
+            LOG_INFO("Deactivate Body {}", body_id)
+        }
+
+        for (uint32_t body_id : m_pending_activate_bodies)
+        {
+            body_interface.ActivateBody(JPH::BodyID(body_id));
+            LOG_INFO("Activate Body {}", body_id)
+        }
+
         m_pending_remove_bodies.clear();
+        m_pending_activate_bodies.clear();
+        m_pending_deactivate_bodies.clear();
     }
 
     bool PhysicsScene::raycast(Vector3                      ray_origin,

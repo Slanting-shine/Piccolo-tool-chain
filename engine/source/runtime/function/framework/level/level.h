@@ -36,6 +36,7 @@ namespace Piccolo
         std::weak_ptr<Character> getCurrentActiveCharacter() const { return m_current_active_character; }
 
         GObjectID createObject(const ObjectInstanceRes& object_instance_res);
+        GObjectID createTempObject(const ObjectInstanceRes& object_instance_res);
         void      deleteGObjectByID(GObjectID go_id);
 
         std::weak_ptr<PhysicsScene> getPhysicsScene() const { return m_physics_scene; }

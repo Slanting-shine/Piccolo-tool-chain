@@ -51,6 +51,9 @@ namespace Piccolo
         Vector2 getEngineWindowPos() const { return m_engine_window_pos; };
         Vector2 getEngineWindowSize() const { return m_engine_window_size; };
         float   getCameraSpeed() const { return m_camera_speed; };
+        Vector2 getCursorUV() const { return cursor_uv; };
+        float   getMousePosX() const { return m_mouse_x; };
+        float   getMousePosY() const { return m_mouse_y; };
 
         void setEngineWindowPos(Vector2 new_window_pos) { m_engine_window_pos = new_window_pos; };
         void setEngineWindowSize(Vector2 new_window_size) { m_engine_window_size = new_window_size; };
@@ -62,6 +65,7 @@ namespace Piccolo
         float   m_mouse_x {0.0f};
         float   m_mouse_y {0.0f};
         float   m_camera_speed {0.05f};
+        Vector2 cursor_uv {0.0f, 0.0f};
 
         size_t       m_cursor_on_axis {3};
         unsigned int m_editor_command {0};

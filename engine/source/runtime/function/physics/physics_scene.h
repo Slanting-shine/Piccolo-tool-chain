@@ -50,6 +50,8 @@ namespace Piccolo
 
         uint32_t createRigidBody(const Transform& global_transform, const RigidBodyComponentRes& rigidbody_actor_res);
         void     removeRigidBody(uint32_t body_id);
+        void     activateRigidBody(uint32_t body_id);
+        void     deactivateRigidBody(uint32_t body_id);
 
         void updateRigidBodyGlobalTransform(uint32_t body_id, const Transform& global_transform);
 
@@ -93,5 +95,7 @@ namespace Piccolo
         PhysicsConfig m_config;
 
         std::vector<uint32_t> m_pending_remove_bodies;
+        std::vector<uint32_t> m_pending_deactivate_bodies;
+        std::vector<uint32_t> m_pending_activate_bodies;
     };
 } // namespace Piccolo

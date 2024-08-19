@@ -26,6 +26,35 @@ namespace Piccolo
         g_runtime_global_context.m_physics_manager->deletePhysicsScene(m_physics_scene);
     }
 
+        GObjectID Level::createTempObject(const ObjectInstanceRes& object_instance_res)
+    {
+        GObjectID object_id = ObjectIDAllocator::alloc();
+        ASSERT(object_id != k_invalid_gobject_id);
+
+        std::shared_ptr<GObject> gobject;
+        try
+        {
+            gobject = std::make_shared<GObject>(object_id);
+        }
+        catch (const std::bad_alloc&)
+        {
+            LOG_FATAL("cannot allocate memory for new gobject");
+        }
+
+        bool is_loaded = gobject->load(object_instance_res);
+        if (is_loaded)
+        {
+            gobject->getComponents();
+            m_gobjects.emplace(object_id, gobject);
+        }
+        else
+        {
+            LOG_ERROR("loading object " + object_instance_res.m_name + " failed");
+            return k_invalid_gobject_id;
+        }
+        return object_id;
+    }
+
     GObjectID Level::createObject(const ObjectInstanceRes& object_instance_res)
     {
         GObjectID object_id = ObjectIDAllocator::alloc();

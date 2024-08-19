@@ -33,6 +33,7 @@ namespace Piccolo
                 transform_component->setDirtyFlag(true);
             }
         }
+
     }
 
     float intersectPlaneRay(glm::vec3 normal, float d, glm::vec3 origin, glm::vec3 dir)
@@ -281,6 +282,8 @@ namespace Piccolo
             LOG_INFO("no game object selected");
         }
     }
+
+   
 
     void EditorSceneManager::onDeleteSelectedGObject()
     {

@@ -13,6 +13,7 @@
 #include "runtime/function/render/render_camera.h"
 #include "runtime/function/render/render_system.h"
 #include "runtime/function/render/window_system.h"
+#include <core/base/macro.h>
 
 namespace Piccolo
 {
@@ -279,7 +280,7 @@ namespace Piccolo
 
         if (isCursorInRect(m_engine_window_pos, m_engine_window_size))
         {
-            if (key == GLFW_MOUSE_BUTTON_LEFT)
+            if (key == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
             {
                 Vector2 picked_uv((m_mouse_x - m_engine_window_pos.x) / m_engine_window_size.x,
                                   (m_mouse_y - m_engine_window_pos.y) / m_engine_window_size.y);

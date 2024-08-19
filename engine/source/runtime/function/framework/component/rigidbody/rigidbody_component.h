@@ -19,7 +19,8 @@ namespace Piccolo
 
         void tick(float delta_time) override {}
         void updateGlobalTransform(const Transform& transform);
-
+        PhysicsActor* getPysicsActor() { return m_physics_actor; };
+        
     protected:
         META(Enable)
         RigidBodyComponentRes m_rigidbody_res;
