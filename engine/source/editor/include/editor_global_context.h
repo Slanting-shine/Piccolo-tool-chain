@@ -17,7 +17,7 @@ namespace Piccolo
         class RenderSystem*       m_render_system {nullptr};
         class WindowSystem*       m_window_system {nullptr};
         class PiccoloEngine*        m_engine_runtime {nullptr};
-
+        class CommandManager*     m_command_manager {nullptr};
     public:
         void initialize(const EditorGlobalContextInitInfo& init_info);
         void clear();

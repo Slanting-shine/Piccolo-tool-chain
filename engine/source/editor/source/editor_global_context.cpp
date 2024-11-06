@@ -18,6 +18,7 @@ namespace Piccolo
 
         m_scene_manager = new EditorSceneManager();
         m_input_manager = new EditorInputManager();
+        m_command_manager = new CommandManager();
         m_scene_manager->initialize();
         m_input_manager->initialize();
     }
@@ -26,5 +27,6 @@ namespace Piccolo
     {
         delete (m_scene_manager);
         delete (m_input_manager);
+        delete (m_command_manager);
     }
 } // namespace Piccolo

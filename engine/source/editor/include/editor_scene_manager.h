@@ -36,18 +36,19 @@ namespace Piccolo
         RenderEntity* getAxisMeshByType(EditorAxisMode axis_mode);
         void onGObjectSelected(GObjectID selected_gobject_id);
         void onDeleteSelectedGObject();
-        void moveEntity(float     new_mouse_pos_x,
-            float     new_mouse_pos_y,
-            float     last_mouse_pos_x,
-            float     last_mouse_pos_y,
-            Vector2   engine_window_pos,
-            Vector2   engine_window_size,
-            size_t    cursor_on_axis,
-            Matrix4x4 model_matrix);
+        void transformEntity(Matrix4x4 new_model_matrix);
 
         void setEditorCamera(std::shared_ptr<RenderCamera> camera) { m_camera = camera; }
         void uploadAxisResource();
         size_t getGuidOfPickedMesh(const Vector2& picked_uv) const;
+        Matrix4x4 calculateMoveFromPos(float     new_mouse_pos_x,
+                                       float     new_mouse_pos_y,
+                                       float     last_mouse_pos_x,
+                                       float     last_mouse_pos_y,
+                                       Vector2   engine_window_pos,
+                                       Vector2   engine_window_size,
+                                       size_t    cursor_on_axis,
+                                       Matrix4x4 model_matrix);
 
     public:
         std::shared_ptr<RenderCamera> getEditorCamera() { return m_camera; };
@@ -73,5 +74,7 @@ namespace Piccolo
         size_t m_selected_axis{ 3 };
 
         bool   m_is_show_axis = true;
+
+        
     };
 }

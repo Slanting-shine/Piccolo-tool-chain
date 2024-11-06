@@ -23,10 +23,11 @@
 #include "runtime/function/render/render_camera.h"
 #include "runtime/function/render/render_system.h"
 #include "runtime/function/render/window_system.h"
-#include "runtime/function/physics/physics_config.h"
-#include "function/physics/physics_scene.h"
-#include <iostream>
+#include "runtime/function/render/render_debug_config.h"
 
+#include <imgui.h>
+#include <imgui_internal.h>
+#include <stb_image.h>
 
 namespace Piccolo
 {
@@ -40,10 +41,6 @@ namespace Piccolo
                                                              Piccolo::Quaternion& values,
                                                              float              resetValue  = 0.0f,
                                                              float              columnWidth = 100.0f);
-    void                                      DrawHeightControl(const std::string&   label,
-                                                                Piccolo::Vector3&  values,
-                                                             float                resetValue  = 0.0f,
-                                                             float                columnWidth = 100.0f);
 
     EditorUI::EditorUI()
     {
@@ -92,7 +89,6 @@ namespace Piccolo
                 DrawVecControl("Position", trans_ptr->m_position);
                 DrawVecControl("Rotation", degrees_val);
                 DrawVecControl("Scale", trans_ptr->m_scale);
-                DrawHeightControl("Fuck???", trans_ptr->m_scale);
 
                 trans_ptr->m_rotation.w = Math::cos(Math::degreesToRadians(degrees_val.x / 2)) *
                                               Math::cos(Math::degreesToRadians(degrees_val.y / 2)) *
@@ -121,6 +117,24 @@ namespace Piccolo
                 trans_ptr->m_rotation.normalise();
 
                 g_editor_global_context.m_scene_manager->drawSelectedEntityAxis();
+            }
+        };
+        m_editor_ui_creator["bool"] = [this](const std::string& name, void* value_ptr)  -> void {
+            if(g_node_depth == -1)
+            {
+                std::string label = "##" + name;
+                ImGui::Text("%s", name.c_str());
+                ImGui::SameLine();
+                ImGui::Checkbox(label.c_str(), static_cast<bool*>(value_ptr));
+            }
+            else
+            {
+                if(g_editor_node_state_array[g_node_depth].second)
+                {
+                    std::string full_label = "##" + getLeafUINodeParentLabel() + name;
+                    ImGui::Text("%s", name.c_str());
+                    ImGui::Checkbox(full_label.c_str(), static_cast<bool*>(value_ptr));
+                }
             }
         };
         m_editor_ui_creator["int"] = [this](const std::string& name, void* value_ptr) -> void {
@@ -323,6 +337,38 @@ namespace Piccolo
                 {
                     g_runtime_global_context.m_world_manager->saveCurrentLevel();
                 }
+                if (ImGui::BeginMenu("Debug"))
+                {
+                    if (ImGui::BeginMenu("Animation"))
+                    {
+                        if (ImGui::MenuItem(g_runtime_global_context.m_render_debug_config->animation.show_skeleton ? "off skeleton" : "show skeleton"))
+                        {
+                            g_runtime_global_context.m_render_debug_config->animation.show_skeleton = !g_runtime_global_context.m_render_debug_config->animation.show_skeleton;
+                        }
+                        if (ImGui::MenuItem(g_runtime_global_context.m_render_debug_config->animation.show_bone_name ? "off bone name" : "show bone name"))
+                        {
+                            g_runtime_global_context.m_render_debug_config->animation.show_bone_name = !g_runtime_global_context.m_render_debug_config->animation.show_bone_name;
+                        }
+                        ImGui::EndMenu();
+                    }
+                    if (ImGui::BeginMenu("Camera"))
+                    {
+                        if (ImGui::MenuItem(g_runtime_global_context.m_render_debug_config->camera.show_runtime_info ? "off runtime info" : "show runtime info"))
+                        {
+                            g_runtime_global_context.m_render_debug_config->camera.show_runtime_info = !g_runtime_global_context.m_render_debug_config->camera.show_runtime_info;
+                        }
+                        ImGui::EndMenu();
+                    }
+                    if (ImGui::BeginMenu("Game Object"))
+                    {
+                        if (ImGui::MenuItem(g_runtime_global_context.m_render_debug_config->gameObject.show_bounding_box ? "off bounding box" : "show bounding box"))
+                        {
+                            g_runtime_global_context.m_render_debug_config->gameObject.show_bounding_box = !g_runtime_global_context.m_render_debug_config->gameObject.show_bounding_box;
+                        }
+                        ImGui::EndMenu();
+                    }
+                    ImGui::EndMenu();
+                }
                 if (ImGui::MenuItem("Exit"))
                 {
                     g_editor_global_context.m_engine_runtime->shutdownEngine();
@@ -358,14 +404,13 @@ namespace Piccolo
             ImGui::End();
             return;
         }
-                
+
         std::shared_ptr<Level> current_active_level =
             g_runtime_global_context.m_world_manager->getCurrentActiveLevel().lock();
         if (current_active_level == nullptr)
             return;
 
         const LevelObjectsMap& all_gobjects = current_active_level->getAllGObjects();
-
         for (auto& id_object_pair : all_gobjects)
         {
             const GObjectID          object_id = id_object_pair.first;
@@ -388,7 +433,6 @@ namespace Piccolo
                 }
             }
         }
-
         ImGui::End();
     }
 
@@ -625,8 +669,6 @@ namespace Piccolo
 
             drawAxisToggleButton("Scale", scale_button_ckecked, (int)EditorAxisMode::ScaleMode);
 
-           
-
             ImGui::SameLine();
 
             float indent_val = 0.0f;
@@ -650,20 +692,22 @@ namespace Piccolo
                     g_editor_global_context.m_scene_manager->drawSelectedEntityAxis();
                     g_editor_global_context.m_input_manager->resetEditorCommand();
                     g_editor_global_context.m_window_system->setFocusMode(true);
+                    // store the current level so that undo redo system can act on right object;
+                    //g_runtime_global_context.m_world_manager->storeCurrentLevel();
                 }
                 ImGui::PopID();
-                
             }
             else
             {
                 if (ImGui::Button("Game Mode"))
                 {
                     g_is_editor_mode = true;
+                    //g_runtime_global_context.m_world_manager->restoreCurrentLevel();
+                    //g_editor_global_context.m_scene_manager->onGObjectSelected(k_invalid_gobject_id);
                     g_editor_global_context.m_scene_manager->drawSelectedEntityAxis();
                     g_runtime_global_context.m_input_system->resetGameCommand();
                     g_editor_global_context.m_render_system->getRenderCamera()->setMainViewMatrix(
                         g_editor_global_context.m_scene_manager->getEditorCamera()->getViewMatrix());
-                    
                 }
             }
 
@@ -680,19 +724,29 @@ namespace Piccolo
             ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f),
                                "Current editor camera move speed: [%f]",
                                g_editor_global_context.m_input_manager->getCameraSpeed());
-
         }
+
+        // GetWindowPos() ----->  X--------------------------------------------O
+        //                        |                                            |
+        //                        |                                            |
+        // menu_bar_rect.Min -->  X--------------------------------------------O
+        //                        |    It is the menu bar window.              |
+        //                        |                                            |
+        //                        O--------------------------------------------X  <-- menu_bar_rect.Max
+        //                        |                                            |
+        //                        |     It is the render target window.        |
+        //                        |                                            |
+        //                        O--------------------------------------------O
+
+        Vector2 render_target_window_pos = { 0.0f, 0.0f };
+        Vector2 render_target_window_size = { 0.0f, 0.0f };
 
         auto menu_bar_rect = ImGui::GetCurrentWindow()->MenuBarRect();
 
-        Vector2 new_window_pos  = {0.0f, 0.0f};
-        Vector2 new_window_size = {0.0f, 0.0f};
-        new_window_pos.x        = ImGui::GetWindowPos().x;
-        new_window_pos.y        = ImGui::GetWindowPos().y + menu_bar_rect.Min.y;
-        new_window_size.x       = ImGui::GetWindowSize().x;
-        new_window_size.y       = ImGui::GetWindowSize().y - menu_bar_rect.Min.y;
-
-        drawDropTargetArea(ImVec2(0.f, 0.f), ImVec2(ImGui::GetWindowSize().x, ImGui::GetWindowSize().y));
+        render_target_window_pos.x = ImGui::GetWindowPos().x;
+        render_target_window_pos.y = menu_bar_rect.Max.y;
+        render_target_window_size.x = ImGui::GetWindowSize().x;
+        render_target_window_size.y = (ImGui::GetWindowSize().y + ImGui::GetWindowPos().y) - menu_bar_rect.Max.y; // coord of right bottom point of full window minus coord of right bottom point of menu bar window.
 
         // if (new_window_pos != m_engine_window_pos || new_window_size != m_engine_window_size)
         {
@@ -701,16 +755,16 @@ namespace Piccolo
             // Return value from ImGui::GetMainViewport()->DpiScal is always the same as first frame.
             // glfwGetMonitorContentScale and glfwSetWindowContentScaleCallback are more adaptive.
             float dpi_scale = main_viewport->DpiScale;
-            g_runtime_global_context.m_render_system->updateEngineContentViewport(new_window_pos.x * dpi_scale,
-                                                                                  new_window_pos.y * dpi_scale,
-                                                                                  new_window_size.x * dpi_scale,
-                                                                                  new_window_size.y * dpi_scale);
+            g_runtime_global_context.m_render_system->updateEngineContentViewport(render_target_window_pos.x * dpi_scale,
+                render_target_window_pos.y * dpi_scale,
+                render_target_window_size.x * dpi_scale,
+                render_target_window_size.y * dpi_scale);
 #else
             g_runtime_global_context.m_render_system->updateEngineContentViewport(
-                new_window_pos.x, new_window_pos.y, new_window_size.x, new_window_size.y);
+                render_target_window_pos.x, render_target_window_pos.y, render_target_window_size.x, render_target_window_size.y);
 #endif
-            g_editor_global_context.m_input_manager->setEngineWindowPos(new_window_pos);
-            g_editor_global_context.m_input_manager->setEngineWindowSize(new_window_size);
+            g_editor_global_context.m_input_manager->setEngineWindowPos(render_target_window_pos);
+            g_editor_global_context.m_input_manager->setEngineWindowSize(render_target_window_size);
         }
 
         ImGui::End();
@@ -764,23 +818,17 @@ namespace Piccolo
             ImGui::TreeNodeEx(node->m_file_name.c_str(),
                               ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen |
                                   ImGuiTreeNodeFlags_SpanFullWidth);
-            
-            if (ImGui::BeginDragDropSource())
+            if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
             {
-                
-                m_pass_on_node = node;
-                ImGui::SetDragDropPayload("DRAG_TYPE", node, sizeof(EditorFileNode));
-                ImGui::Text("Dragging Me");
-                ImGui::EndDragDropSource();
+                onFileContentItemClicked(node);
             }
-
             ImGui::TableNextColumn();
             ImGui::SetNextItemWidth(100.0f);
             ImGui::TextUnformatted(node->m_file_type.c_str());
         }
     }
 
-    void EditorUI::onFileContentItemClicked(EditorFileNode* node,Vector3 position)
+    void EditorUI::onFileContentItemClicked(EditorFileNode* node)
     {
         if (node->m_file_type != "object")
             return;
@@ -801,167 +849,8 @@ namespace Piccolo
         if (new_gobject_id != k_invalid_gobject_id)
         {
             g_editor_global_context.m_scene_manager->onGObjectSelected(new_gobject_id);
-            std::shared_ptr<GObject> selected_object = level->getGObjectByID(new_gobject_id).lock();
-            TransformComponent*           transform_component = selected_object->tryGetComponent(TransformComponent);
-            transform_component->setPosition(position);
-            std::shared_ptr<PhysicsScene> physics_scene =
-                g_runtime_global_context.m_world_manager->getCurrentActivePhysicsScene().lock();
-            ASSERT(physics_scene);
-            RigidBodyComponent* rigid_body_component = selected_object->tryGetComponent(RigidBodyComponent);
-            PhysicsActor*       physics_actor        = rigid_body_component->getPysicsActor();
-            const uint32_t      body_id              = physics_actor->getBodyID();
-            physics_scene->deactivateRigidBody(body_id);
         }
     }
-
-    bool EditorUI::createTempObject(EditorFileNode* node, Vector3 position)
-    {
-        if (node->m_file_type != "object")
-            return false;
-
-        std::shared_ptr<Level> level = g_runtime_global_context.m_world_manager->getCurrentActiveLevel().lock();
-        if (level == nullptr)
-            return false;
-
-        const unsigned int new_object_index = ++m_new_object_index_map[node->m_file_name];
-
-        ObjectInstanceRes new_object_instance_res;
-        new_object_instance_res.m_name =
-            "New_" + Path::getFilePureName(node->m_file_name) + "_" + std::to_string(new_object_index);
-        new_object_instance_res.m_definition =
-            g_runtime_global_context.m_asset_manager->getFullPath(node->m_file_path).generic_string();
-
-        size_t new_gobject_id = level->createObject(new_object_instance_res);
-        if (new_gobject_id != k_invalid_gobject_id)
-        {
-            g_editor_global_context.m_scene_manager->onGObjectSelected(new_gobject_id);
-            
-            std::shared_ptr<GObject> selected_object     = level->getGObjectByID(new_gobject_id).lock();
-            
-            TransformComponent*      transform_component = selected_object->tryGetComponent(TransformComponent);
-            transform_component->setPosition(position);
-            std::shared_ptr<PhysicsScene> physics_scene =
-                g_runtime_global_context.m_world_manager->getCurrentActivePhysicsScene().lock();
-            ASSERT(physics_scene);
-            RigidBodyComponent* rigid_body_component = selected_object->tryGetComponent(RigidBodyComponent);
-            PhysicsActor*       physics_actor        = rigid_body_component->getPysicsActor();
-            const uint32_t      body_id              = physics_actor->getBodyID();
-            //physics_scene->deactivateRigidBody(body_id);
-            return true;
-        }
-        LOG_INFO("not supposed to be here")
-        return false;
-    }
-
-    void EditorUI::drawDropTargetArea(const ImVec2& position, const ImVec2& size)
-    {
-        // 设置控件的位置相对于当前窗口（基于传入的position）
-        ImGui::SetCursorPos(position);
-
-        // 绘制一个透明的按钮用于拖放目标
-        ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.0f); // 设置透明度为完全透明
-        if (ImGui::InvisibleButton("##dropArea", size))
-        {
-            // 可以在这里处理点击事件，以防选择到了下面的东西。
-            
-        }
-        ImGui::PopStyleVar();
-
-        // 检查拖放事件
-        if (ImGui::BeginDragDropTarget())
-        {
-
-
-            std::shared_ptr<PhysicsScene> physics_scene =
-                g_runtime_global_context.m_world_manager->getCurrentActivePhysicsScene().lock();
-            std::vector<PhysicsHitInfo> info;
-            if (physics_scene)
-            {
-                
-                std::shared_ptr<RenderCamera> camera =
-                    g_runtime_global_context.m_render_system->getRenderCamera();
-                Matrix4x4                     inverse_projection_martix = camera->getPersProjMatrix().inverse();
-                Vector2 cursor_uv = g_editor_global_context.m_input_manager->getCursorUV();
-                float m_mouse_x                               = g_editor_global_context.m_input_manager->getMousePosX();
-                float m_mouse_y                               = g_editor_global_context.m_input_manager->getMousePosY();
-                Vector2 m_engine_window_pos             = g_editor_global_context.m_input_manager->getEngineWindowPos();
-                Vector2 m_engine_window_size = g_editor_global_context.m_input_manager->getEngineWindowSize();
-                float   ndc_x = (2.0f * (m_mouse_x - m_engine_window_pos.x) / m_engine_window_size.x) - 1.0f;
-                float   ndc_y = (2.0f * (m_mouse_y - m_engine_window_pos.y) / m_engine_window_size.y) - 1.0f;
-                float   ndc_z  = 1.0f; // 代表射线深入场景的深度
-                /*float ndc_x = (m_mouse_x - m_engine_window_pos.x) / m_engine_window_size.x;
-                float ndc_y = ( m_mouse_y - m_engine_window_pos.y) / m_engine_window_size.y;*/
-
-
-                Vector4 ray_clip(ndc_x, ndc_y, 1.0f, 1.0f);
-                
-                Vector4 ray_eye = inverse_projection_martix * ray_clip;
-                /*ray_eye.z                     = -1.0f;
-                ray_eye.w                     = 0.0f;*/
-                Matrix4x4 view_matrix         = camera->getViewMatrix();
-                Matrix4x4 inverse_view_matrix = view_matrix.inverse();
-                Vector4   ray_world           = inverse_view_matrix * ray_eye;
-                Vector3   ray_direction       = Vector3(ray_world.x, ray_world.y, ray_world.z);
-                ray_direction.normalise();
-
-                bool hit = physics_scene->raycast(camera->m_position, ray_direction,
-                                                  100000.f,
-                                                  info);
-                
-                if (hit)
-                {
-                    if (!m_drop_target_created)
-                    {
-                        if (m_pass_on_node)
-                        {
-                            m_drop_target_created = createTempObject(m_pass_on_node, info[0].hit_position);
-                        }
-                        else
-                        {
-                            LOG_ERROR("Nothing passed when try to create temp object");
-                        }
-                    }
-                    else
-                    {
-                        std::shared_ptr<GObject> selected_gobject =
-                            g_editor_global_context.m_scene_manager->getSelectedGObject().lock();
-                        TransformComponent* transform_component = selected_gobject->tryGetComponent(TransformComponent);
-
-                        RigidBodyComponent* rigid_body_component = selected_gobject->tryGetComponent(RigidBodyComponent);
-                        PhysicsActor*       physics_actor        = rigid_body_component->getPysicsActor();
-                        const uint32_t      body_id              = physics_actor->getBodyID();
-                        //physics_scene->deactivateRigidBody(body_id);
-                        transform_component->setPosition(info[0].hit_position);
-                        //physics_scene->activateRigidBody(body_id);
-                    }
-
-                }
-                    
-                
-            }
-            
-            
-
-            // 检查是否有符合类型的数据被拖入
-            const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_TYPE");
-            if (payload)
-            {
-                LOG_INFO("done");
-                ImGui::Text("Dropped: %s", (const char*)payload->Data);
-                //onFileContentItemClicked((EditorFileNode*)payload->Data, info[0].hit_position);
-                std::shared_ptr<GObject> selected_gobject =
-                    g_editor_global_context.m_scene_manager->getSelectedGObject().lock();
-                RigidBodyComponent* rigid_body_component = selected_gobject->tryGetComponent(RigidBodyComponent);
-                PhysicsActor*       physics_actor        = rigid_body_component->getPysicsActor();
-                const uint32_t      body_id              = physics_actor->getBodyID();
-                //physics_scene->activateRigidBody(body_id);
-                m_drop_target_created = false;
-            }
-            ImGui::EndDragDropTarget();
-        }
-
-    }
-
 
     inline void windowContentScaleUpdate(float scale)
     {
@@ -1093,62 +982,6 @@ namespace Piccolo
     void EditorUI::preRender() { showEditorUI(); }
 
     void DrawVecControl(const std::string& label, Piccolo::Vector3& values, float resetValue, float columnWidth)
-    {
-        ImGui::PushID(label.c_str());
-
-        ImGui::Columns(2);
-        ImGui::SetColumnWidth(0, columnWidth);
-        ImGui::Text("%s", label.c_str());
-        ImGui::NextColumn();
-
-        ImGui::PushMultiItemsWidths(3, ImGui::CalcItemWidth());
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2 {0, 0});
-
-        float  lineHeight = GImGui->Font->FontSize + GImGui->Style.FramePadding.y * 2.0f;
-        ImVec2 buttonSize = {lineHeight + 3.0f, lineHeight};
-
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4 {0.8f, 0.1f, 0.15f, 1.0f});
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4 {0.9f, 0.2f, 0.2f, 1.0f});
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4 {0.8f, 0.1f, 0.15f, 1.0f});
-        if (ImGui::Button("X", buttonSize))
-            values.x = resetValue;
-        ImGui::PopStyleColor(3);
-
-        ImGui::SameLine();
-        ImGui::DragFloat("##X", &values.x, 0.1f, 0.0f, 0.0f, "%.2f");
-        ImGui::PopItemWidth();
-        ImGui::SameLine();
-
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4 {0.2f, 0.45f, 0.2f, 1.0f});
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4 {0.3f, 0.55f, 0.3f, 1.0f});
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4 {0.2f, 0.45f, 0.2f, 1.0f});
-        if (ImGui::Button("Y", buttonSize))
-            values.y = resetValue;
-        ImGui::PopStyleColor(3);
-
-        ImGui::SameLine();
-        ImGui::DragFloat("##Y", &values.y, 0.1f, 0.0f, 0.0f, "%.2f");
-        ImGui::PopItemWidth();
-        ImGui::SameLine();
-
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4 {0.1f, 0.25f, 0.8f, 1.0f});
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4 {0.2f, 0.35f, 0.9f, 1.0f});
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4 {0.1f, 0.25f, 0.8f, 1.0f});
-        if (ImGui::Button("Z", buttonSize))
-            values.z = resetValue;
-        ImGui::PopStyleColor(3);
-
-        ImGui::SameLine();
-        ImGui::DragFloat("##Z", &values.z, 0.1f, 0.0f, 0.0f, "%.2f");
-        ImGui::PopItemWidth();
-
-        ImGui::PopStyleVar();
-
-        ImGui::Columns(1);
-        ImGui::PopID();
-    }
-
-        void DrawHeightControl(const std::string& label, Piccolo::Vector3& values, float resetValue, float columnWidth)
     {
         ImGui::PushID(label.c_str());
 

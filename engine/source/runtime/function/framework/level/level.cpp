@@ -8,15 +8,13 @@
 #include "runtime/engine.h"
 #include "runtime/function/character/character.h"
 #include "runtime/function/framework/object/object.h"
+#include "runtime/function/particle/particle_manager.h"
 #include "runtime/function/physics/physics_manager.h"
 #include "runtime/function/physics/physics_scene.h"
-
 #include <limits>
 
 namespace Piccolo
 {
-    Level::~Level() { clear(); }
-
     void Level::clear()
     {
         m_current_active_character.reset();
@@ -24,35 +22,6 @@ namespace Piccolo
 
         ASSERT(g_runtime_global_context.m_physics_manager);
         g_runtime_global_context.m_physics_manager->deletePhysicsScene(m_physics_scene);
-    }
-
-        GObjectID Level::createTempObject(const ObjectInstanceRes& object_instance_res)
-    {
-        GObjectID object_id = ObjectIDAllocator::alloc();
-        ASSERT(object_id != k_invalid_gobject_id);
-
-        std::shared_ptr<GObject> gobject;
-        try
-        {
-            gobject = std::make_shared<GObject>(object_id);
-        }
-        catch (const std::bad_alloc&)
-        {
-            LOG_FATAL("cannot allocate memory for new gobject");
-        }
-
-        bool is_loaded = gobject->load(object_instance_res);
-        if (is_loaded)
-        {
-            gobject->getComponents();
-            m_gobjects.emplace(object_id, gobject);
-        }
-        else
-        {
-            LOG_ERROR("loading object " + object_instance_res.m_name + " failed");
-            return k_invalid_gobject_id;
-        }
-        return object_id;
     }
 
     GObjectID Level::createObject(const ObjectInstanceRes& object_instance_res)
@@ -82,6 +51,50 @@ namespace Piccolo
         }
         return object_id;
     }
+    
+    void Level::restoreObejct(GObjectID object_id, const ObjectInstanceRes& object_instance_res) {
+        std::shared_ptr<GObject> gobject;
+        try
+        {
+            gobject = std::make_shared<GObject>(object_id);
+        }
+        catch (const std::bad_alloc&)
+        {
+            LOG_FATAL("cannot allocate memory when restoring gobject");
+        }
+
+        bool is_loaded = gobject->load(object_instance_res);
+        if (is_loaded)
+        {
+            m_gobjects.emplace(object_id, gobject);
+        }
+        else
+        {
+            LOG_ERROR("restoring object " + object_instance_res.m_name + " failed");
+        }
+    }
+
+    ObjectInstanceRes Level::storeObject(GObjectID go_id)
+    {
+        auto iter = m_gobjects.find(go_id);
+        if (iter != m_gobjects.end())
+        {
+            std::shared_ptr<GObject> object = iter->second;
+            if (object)
+            {
+                if (m_current_active_character && m_current_active_character->getObjectID() == object->getID())
+                {
+                    m_current_active_character->setObject(nullptr);
+                }
+            }
+        }
+        ObjectInstanceRes object_instance_res;
+        iter->second->save(object_instance_res);
+        m_gobjects.erase(go_id);
+        return object_instance_res;
+    }
+
+    
 
     bool Level::load(const std::string& level_res_url)
     {
@@ -98,6 +111,7 @@ namespace Piccolo
 
         ASSERT(g_runtime_global_context.m_physics_manager);
         m_physics_scene = g_runtime_global_context.m_physics_manager->createPhysicsScene(level_res.m_gravity);
+        ParticleEmitterIDAllocator::reset();
 
         for (const ObjectInstanceRes& object_instance_res : level_res.m_objects)
         {
@@ -123,6 +137,10 @@ namespace Piccolo
         LOG_INFO("level load succeed");
 
         return true;
+    }
+    void Level::restore() {
+        LOG_INFO("restoring level: {}", m_level_res_url);
+        m_gobjects = m_copy_gobjects;
     }
 
     void Level::unload()
@@ -163,6 +181,19 @@ namespace Piccolo
         }
 
         return is_save_success;
+    }
+
+    void Level::store()
+    {
+        if (m_is_loaded)
+        {
+            LOG_INFO("storing level: {}", m_level_res_url);
+            m_copy_gobjects = m_gobjects;
+        }
+        else
+        {
+            LOG_ERROR("try to store level before loaded");
+        }
     }
 
     void Level::tick(float delta_time)

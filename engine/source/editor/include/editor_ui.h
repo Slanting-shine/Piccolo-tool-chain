@@ -12,9 +12,6 @@
 #include <chrono>
 #include <map>
 #include <vector>
-#include <imgui.h>
-#include <imgui_internal.h>
-#include <stb_image.h>
 
 namespace Piccolo
 {
@@ -28,12 +25,11 @@ namespace Piccolo
         EditorUI();
 
     private:
-        void        onFileContentItemClicked(EditorFileNode* node, Vector3 position);
+        void        onFileContentItemClicked(EditorFileNode* node);
         void        buildEditorFileAssetsUITree(EditorFileNode* node);
         void        drawAxisToggleButton(const char* string_id, bool check_state, int axis_mode);
         void        createClassUI(Reflection::ReflectionInstance& instance);
         void        createLeafNodeUI(Reflection::ReflectionInstance& instance);
-        void        drawDropTargetArea(const ImVec2& position, const ImVec2& size); 
         std::string getLeafUINodeParentLabel();
 
         void showEditorUI();
@@ -42,7 +38,7 @@ namespace Piccolo
         void showEditorFileContentWindow(bool* p_open);
         void showEditorGameWindow(bool* p_open);
         void showEditorDetailWindow(bool* p_open);
-        bool createTempObject(EditorFileNode* node, Vector3 position);
+
         void setUIColorStyle();
 
     public:
@@ -55,8 +51,6 @@ namespace Piccolo
         EditorFileService                                                        m_editor_file_service;
         std::chrono::time_point<std::chrono::steady_clock>                       m_last_file_tree_update;
 
-        EditorFileNode* m_pass_on_node       = nullptr;
-        bool m_drop_target_created           = false;
         bool m_editor_menu_window_open       = true;
         bool m_asset_window_open             = true;
         bool m_game_engine_window_open       = true;

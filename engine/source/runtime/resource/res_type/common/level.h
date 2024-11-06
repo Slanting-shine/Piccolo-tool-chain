@@ -8,6 +8,7 @@
 namespace Piccolo
 {
     REFLECTION_TYPE(LevelRes)
+    //serialize level without objectid
     CLASS(LevelRes, Fields)
     {
         REFLECTION_BODY(LevelRes);

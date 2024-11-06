@@ -19,10 +19,12 @@ namespace Piccolo
     class Level
     {
     public:
-        virtual ~Level();
+        virtual ~Level(){};
 
         bool load(const std::string& level_res_url);
         void unload();
+        void store();
+        void restore();
 
         bool save();
 
@@ -36,7 +38,8 @@ namespace Piccolo
         std::weak_ptr<Character> getCurrentActiveCharacter() const { return m_current_active_character; }
 
         GObjectID createObject(const ObjectInstanceRes& object_instance_res);
-        GObjectID createTempObject(const ObjectInstanceRes& object_instance_res);
+        void              restoreObejct(GObjectID object_id, const ObjectInstanceRes& object_instance_res);
+        ObjectInstanceRes storeObject(GObjectID go_id);
         void      deleteGObjectByID(GObjectID go_id);
 
         std::weak_ptr<PhysicsScene> getPhysicsScene() const { return m_physics_scene; }
@@ -49,6 +52,7 @@ namespace Piccolo
 
         // all game objects in this level, key: object id, value: object instance
         LevelObjectsMap m_gobjects;
+        LevelObjectsMap m_copy_gobjects;
 
         std::shared_ptr<Character> m_current_active_character;
 

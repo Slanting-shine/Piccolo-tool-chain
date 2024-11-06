@@ -61,6 +61,16 @@ namespace Piccolo
             }
             return glfwGetMouseButton(m_window, button) == GLFW_PRESS;
         }
+
+        bool isMouseButtonUp(int button) const
+        {
+            if (button < GLFW_MOUSE_BUTTON_1 || button > GLFW_MOUSE_BUTTON_LAST)
+            {
+                return false;
+            }
+            return glfwGetMouseButton(m_window, button) == GLFW_RELEASE;
+        }
+
         bool getFocusMode() const { return m_is_focus_mode; }
         void setFocusMode(bool mode);
 

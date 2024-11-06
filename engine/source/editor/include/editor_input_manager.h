@@ -1,16 +1,17 @@
 #pragma once
 
 #include "runtime/core/math/vector2.h"
-
+#include "editor_command_manager.h"
 #include "runtime/function/render/render_camera.h"
 
 #include <vector>
+
 
 namespace Piccolo
 {
     class PiccoloEditor;
 
-    enum class EditorCommand : unsigned int
+    enum class EditorInputCommand : unsigned int
     {
         camera_left      = 1 << 0,  // A
         camera_back      = 1 << 1,  // S
@@ -23,6 +24,8 @@ namespace Piccolo
         scale_mode       = 1 << 8,  // C
         exit             = 1 << 9,  // Esc
         delete_object    = 1 << 10, // Delete
+        undo             = 1 << 11, // undo
+        redo             = 1 << 12, // redo
     };
 
     class EditorInputManager
@@ -51,9 +54,6 @@ namespace Piccolo
         Vector2 getEngineWindowPos() const { return m_engine_window_pos; };
         Vector2 getEngineWindowSize() const { return m_engine_window_size; };
         float   getCameraSpeed() const { return m_camera_speed; };
-        Vector2 getCursorUV() const { return cursor_uv; };
-        float   getMousePosX() const { return m_mouse_x; };
-        float   getMousePosY() const { return m_mouse_y; };
 
         void setEngineWindowPos(Vector2 new_window_pos) { m_engine_window_pos = new_window_pos; };
         void setEngineWindowSize(Vector2 new_window_size) { m_engine_window_size = new_window_size; };
@@ -65,9 +65,13 @@ namespace Piccolo
         float   m_mouse_x {0.0f};
         float   m_mouse_y {0.0f};
         float   m_camera_speed {0.05f};
-        Vector2 cursor_uv {0.0f, 0.0f};
-
+        bool  is_dragging = false;
+        bool                                     moving_start = false;
         size_t       m_cursor_on_axis {3};
         unsigned int m_editor_command {0};
+        std::shared_ptr<EditorMoveEntityCommand> moving_command      = std::make_shared<EditorMoveEntityCommand>();
+        size_t                                   selected_gobject_id = k_invalid_gobject_id;
+        bool                                     undo_pressed        = false;
+        bool                                     redo_pressed        = false;
     };
 } // namespace Piccolo
